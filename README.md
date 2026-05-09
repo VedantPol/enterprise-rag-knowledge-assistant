@@ -100,6 +100,31 @@ Then open:
 http://localhost:8000
 ```
 
+## Push Image To Docker Hub
+
+Set the image name in `.env`:
+
+```env
+DOCKER_IMAGE=your-dockerhub-username/enterprise-rag-assistant:latest
+```
+
+Build and push:
+
+```bash
+docker login
+docker compose build rag-assistant
+docker compose push rag-assistant
+```
+
+On your home server, pull and run the same image:
+
+```bash
+docker compose pull rag-assistant
+docker compose --profile tunnel up -d
+```
+
+Keep secrets in `.env`. Do not put `GEMINI_API_KEY`, `PINECONE_API_KEY`, or `CLOUDFLARE_TUNNEL_TOKEN` inside the image.
+
 ## Deploy With Cloudflare Tunnel
 
 For a home server, use Pinecone so vectors survive restarts:

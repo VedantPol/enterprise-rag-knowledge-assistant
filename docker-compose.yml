@@ -1,5 +1,6 @@
 services:
   rag-assistant:
+    image: ${DOCKER_IMAGE:-enterprise-rag-assistant:latest}
     build: .
     container_name: enterprise-rag-assistant
     restart: unless-stopped
