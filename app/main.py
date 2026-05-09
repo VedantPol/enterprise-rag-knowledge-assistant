@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings, get_settings
 from app.rag import RagService
+from app.sample_data import SAMPLE_PROMPTS, SAMPLE_TOPIC
 from app.schemas import AskRequest, AskResponse, DocumentSummary, IngestResponse
 
 
@@ -39,6 +40,11 @@ def index() -> FileResponse:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "service": settings.app_name}
+
+
+@app.get("/api/sample")
+def sample() -> dict:
+    return {"topic": SAMPLE_TOPIC, "prompts": SAMPLE_PROMPTS}
 
 
 @app.post("/api/ingest", response_model=IngestResponse)

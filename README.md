@@ -1,101 +1,149 @@
 # Enterprise RAG Knowledge Assistant
 
-A deployable FastAPI website for source-aware search over policy and technical PDFs. It parses PDFs, chunks them with LangChain, creates embeddings, stores vectors in Pinecone, applies metadata filters, optionally reranks retrieved passages, and generates citation-grounded answers.
+A sample source-aware RAG web app for searching policy and technical documents. It parses PDFs, chunks text with LangChain, embeds content, stores vectors in Pinecone for production, supports local in-memory demo mode, reranks results, and generates citation-grounded answers with Gemini.
+
+## What You Can Try First
+
+The app ships with a built-in dummy topic:
+
+```text
+Cloudflare Tunnel Home Server Deployment
+```
+
+After starting the website, click one of the suggested prompts in the left panel. You can test the full ask flow before uploading your own PDF.
 
 ## Stack
 
 - Python
 - FastAPI
 - LangChain
-- Pinecone, with an in-memory local demo fallback
-- Docker
+- Pinecone for persistent vector search
+- In-memory vector search for local sample mode
 - Gemini API
+- Docker
 - Cloudflare Tunnel
 
-## Local Setup
+## Run Locally
 
-1. Create an environment file:
+1. Create and activate a virtual environment.
 
-   ```bash
-   cp .env.example .env
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
    ```
 
-2. Edit `.env` and set:
+2. Install dependencies.
 
-   ```bash
-   PINECONE_API_KEY=your-pinecone-key
-   PINECONE_INDEX_NAME=enterprise-rag
+   ```powershell
+   pip install -r requirements.txt
+   ```
+
+3. Create your local environment file.
+
+   ```powershell
+   copy .env.example .env
+   ```
+
+4. Open `.env` and set your Gemini key.
+
+   ```env
    GEMINI_API_KEY=your-free-tier-gemini-key
    ```
 
-3. Run the service:
+   You may leave `PINECONE_API_KEY` blank for the sample demo. The app will use an in-memory vector index. That means uploaded PDFs reset when the server restarts.
 
-   ```bash
-   docker compose up --build
+5. Start the website.
+
+   ```powershell
+   uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
    ```
 
-4. Open:
+6. Open the site.
 
    ```text
-   http://localhost:8000
+   http://127.0.0.1:8000
    ```
 
-Without `GEMINI_API_KEY`, the app still retrieves and cites the most relevant passages. With `GEMINI_API_KEY`, it generates a grounded answer from retrieved context using Gemini. `OPENAI_API_KEY` is still supported as an optional fallback.
+## Suggested Prompts
 
-For quick local demos, `PINECONE_API_KEY` can be left blank. The app will use an in-memory vector index that resets when the server restarts. For home-server deployment, set `PINECONE_API_KEY` so indexed documents persist in Pinecone.
+Try these with the built-in sample data:
 
-## Cloudflare Tunnel Deployment
+- What is the safest way to expose the app from a home server?
+- Which environment variables do I need before running Docker Compose?
+- How do I update the app after pushing a new GitHub commit?
+- Why should I keep Pinecone enabled on the server?
 
-1. On your home server, install Docker and Docker Compose.
+## Upload Your Own PDF
 
-2. In Cloudflare Zero Trust, create a tunnel and add a public hostname, for example:
+1. Use the **Ingest PDF** panel.
+2. Choose a PDF.
+3. Optionally add metadata like department and document type.
+4. Click **Index document**.
+5. Ask a question about the PDF.
 
-   ```text
-   kb.yourdomain.com -> http://rag-assistant:8000
-   ```
+The loading bar shows the active work: upload, parsing, chunking, embeddings, retrieval, reranking, Gemini API call, and citation formatting.
 
-3. Copy the tunnel token into `.env`:
+## Run With Docker
 
-   ```bash
-   CLOUDFLARE_TUNNEL_TOKEN=your-cloudflare-tunnel-token
-   ```
-
-4. Start the app and tunnel containers:
-
-   ```bash
-   docker compose --profile tunnel up -d --build
-   ```
-
-Cloudflare will route your public hostname to the FastAPI container through the `cloudflared` service on the same Docker network.
-
-## API
-
-### Upload and Index a PDF
+1. Make sure Docker is installed.
+2. Create `.env` from `.env.example`.
+3. Set `GEMINI_API_KEY`.
+4. Start the app.
 
 ```bash
-curl -X POST http://localhost:8000/api/ingest \
-  -F "file=@policy.pdf" \
-  -F "department=HR" \
-  -F "doc_type=Policy"
+docker compose up -d --build
 ```
 
-### Ask a Question
+Then open:
+
+```text
+http://localhost:8000
+```
+
+## Deploy With Cloudflare Tunnel
+
+For a home server, use Pinecone so vectors survive restarts:
+
+```env
+PINECONE_API_KEY=your-pinecone-key
+PINECONE_INDEX_NAME=enterprise-rag
+GEMINI_API_KEY=your-gemini-key
+CLOUDFLARE_TUNNEL_TOKEN=your-cloudflare-tunnel-token
+```
+
+In Cloudflare Zero Trust, map your public hostname to:
+
+```text
+http://rag-assistant:8000
+```
+
+Start the app and tunnel:
 
 ```bash
-curl -X POST http://localhost:8000/api/ask \
-  -H "Content-Type: application/json" \
-  -d '{"question":"What is the password rotation policy?","department":"HR"}'
+docker compose --profile tunnel up -d --build
 ```
 
-### Health Check
+## Update On Your Server
+
+After pushing changes to GitHub:
+
+```bash
+cd /opt/enterprise-rag-knowledge-assistant
+git pull
+docker compose --profile tunnel up -d --build
+```
+
+## Useful Checks
 
 ```bash
 curl http://localhost:8000/health
+docker compose logs -f rag-assistant
+docker compose --profile tunnel logs -f cloudflared
 ```
 
 ## Notes
 
-- `storage/` is mounted as a Docker volume path and stores uploaded PDFs plus the local document manifest.
-- Pinecone stores vectors and searchable metadata.
-- The default embedding model is `sentence-transformers/all-MiniLM-L6-v2`, which uses `EMBEDDING_DIM=384`.
-- If you change `EMBEDDING_MODEL`, update `EMBEDDING_DIM` and recreate or use a new Pinecone index.
+- Local sample mode uses in-memory vectors and resets on restart.
+- Server mode should use Pinecone for persistence.
+- Default embeddings use `sentence-transformers/all-MiniLM-L6-v2` with `EMBEDDING_DIM=384`.
+- If you change the embedding model, update `EMBEDDING_DIM` and use a new Pinecone index.

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,43 +8,74 @@
   </head>
   <body>
     <main class="shell">
-      <section class="topbar">
+      <header class="topbar">
         <div>
-          <p class="eyebrow">Policy and technical document search</p>
+          <p class="eyebrow">Source-aware RAG sample project</p>
           <h1>Enterprise RAG Knowledge Assistant</h1>
+          <p class="subtitle">Ask grounded questions across indexed docs, sample runbooks, and uploaded PDFs.</p>
         </div>
-        <div class="status" id="healthStatus">Checking service...</div>
+        <div class="top-actions">
+          <div class="status" id="healthStatus">Checking service...</div>
+          <button class="icon-button" id="themeToggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span id="themeIcon">D</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="guide-strip">
+        <div>
+          <span>1</span>
+          <p>Run `pip install -r requirements.txt` once.</p>
+        </div>
+        <div>
+          <span>2</span>
+          <p>Add `GEMINI_API_KEY` in `.env`.</p>
+        </div>
+        <div>
+          <span>3</span>
+          <p>Start with `uvicorn app.main:app --reload`.</p>
+        </div>
       </section>
 
       <section class="workspace">
-        <aside class="panel ingest-panel">
-          <h2>Ingest PDF</h2>
-          <form id="ingestForm">
-            <label>
-              PDF
-              <input id="pdfFile" type="file" name="file" accept="application/pdf" required />
-            </label>
-            <label>
-              Department
-              <input id="department" name="department" placeholder="Engineering, HR, Legal" />
-            </label>
-            <label>
-              Document type
-              <input id="docType" name="doc_type" placeholder="Policy, Runbook, Spec" />
-            </label>
-            <button type="submit">Index document</button>
-          </form>
-          <div class="message" id="ingestMessage"></div>
+        <aside class="panel side-panel">
+          <section>
+            <h2>Sample Topic</h2>
+            <p class="muted" id="sampleTopic">Loading sample topic...</p>
+            <div class="prompt-list" id="samplePrompts"></div>
+          </section>
 
-          <h2>Indexed Sources</h2>
-          <div class="sources" id="sources"></div>
+          <section>
+            <h2>Ingest PDF</h2>
+            <form id="ingestForm">
+              <label>
+                PDF
+                <input id="pdfFile" type="file" name="file" accept="application/pdf" required />
+              </label>
+              <label>
+                Department
+                <input id="department" name="department" placeholder="Engineering, HR, Legal" />
+              </label>
+              <label>
+                Document type
+                <input id="docType" name="doc_type" placeholder="Policy, Runbook, Spec" />
+              </label>
+              <button type="submit">Index document</button>
+            </form>
+            <div class="message" id="ingestMessage"></div>
+          </section>
+
+          <section>
+            <h2>Indexed Sources</h2>
+            <div class="sources" id="sources"></div>
+          </section>
         </aside>
 
         <section class="panel ask-panel">
           <form id="askForm">
             <label>
               Question
-              <textarea id="question" rows="4" placeholder="Ask a grounded question about indexed documents..." required></textarea>
+              <textarea id="question" rows="4" placeholder="Try a sample prompt or ask about your uploaded PDF..." required></textarea>
             </label>
             <div class="filters">
               <label>
@@ -59,8 +90,19 @@
             <button type="submit">Ask assistant</button>
           </form>
 
+          <div class="progress-wrap hidden" id="progressWrap">
+            <div class="progress-header">
+              <strong id="progressTitle">Working</strong>
+              <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div id="progressFill"></div>
+            </div>
+            <p id="progressDetail">Preparing request...</p>
+          </div>
+
           <article class="answer" id="answer">
-            <p>Upload documents, then ask a question. Answers are grounded in retrieved passages and citations.</p>
+            <p>Select a sample prompt to try the built-in Cloudflare Tunnel runbook, or upload a PDF and ask about it.</p>
           </article>
           <section class="citations" id="citations"></section>
         </section>

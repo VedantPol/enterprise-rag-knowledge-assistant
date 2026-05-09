@@ -5,6 +5,33 @@ const askForm = document.querySelector("#askForm");
 const answer = document.querySelector("#answer");
 const citations = document.querySelector("#citations");
 const sources = document.querySelector("#sources");
+const sampleTopic = document.querySelector("#sampleTopic");
+const samplePrompts = document.querySelector("#samplePrompts");
+const themeToggle = document.querySelector("#themeToggle");
+const themeIcon = document.querySelector("#themeIcon");
+const progressWrap = document.querySelector("#progressWrap");
+const progressTitle = document.querySelector("#progressTitle");
+const progressPercent = document.querySelector("#progressPercent");
+const progressFill = document.querySelector("#progressFill");
+const progressDetail = document.querySelector("#progressDetail");
+
+let progressTimer;
+
+const askStages = [
+  { pct: 18, text: "Packaging your question for the retrieval API..." },
+  { pct: 38, text: "Searching embeddings and metadata filters..." },
+  { pct: 58, text: "Reranking the strongest source chunks..." },
+  { pct: 78, text: "Hitting the Gemini API and waiting for a grounded answer..." },
+  { pct: 92, text: "Formatting citations and answer text..." },
+];
+
+const ingestStages = [
+  { pct: 18, text: "Uploading the PDF to the FastAPI backend..." },
+  { pct: 36, text: "Parsing pages and extracting text..." },
+  { pct: 58, text: "Chunking content for retrieval..." },
+  { pct: 78, text: "Creating embeddings and updating the vector index..." },
+  { pct: 92, text: "Refreshing indexed source metadata..." },
+];
 
 async function requestJson(url, options = {}) {
   const response = await fetch(url, options);
@@ -15,12 +42,43 @@ async function requestJson(url, options = {}) {
   return data;
 }
 
+function initTheme() {
+  const stored = localStorage.getItem("rag-theme") || "dark";
+  document.documentElement.dataset.theme = stored;
+  themeIcon.textContent = stored === "dark" ? "D" : "L";
+}
+
+themeToggle.addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem("rag-theme", next);
+  themeIcon.textContent = next === "dark" ? "D" : "L";
+});
+
 async function loadHealth() {
   try {
     const data = await requestJson("/health");
     healthStatus.textContent = `${data.status.toUpperCase()} - ${data.service}`;
   } catch (error) {
     healthStatus.textContent = error.message;
+  }
+}
+
+async function loadSample() {
+  try {
+    const data = await requestJson("/api/sample");
+    sampleTopic.textContent = data.topic;
+    samplePrompts.innerHTML = data.prompts
+      .map((prompt) => `<button class="prompt-button" type="button">${escapeHtml(prompt)}</button>`)
+      .join("");
+    samplePrompts.querySelectorAll("button").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelector("#question").value = button.textContent;
+        document.querySelector("#question").focus();
+      });
+    });
+  } catch (error) {
+    sampleTopic.textContent = error.message;
   }
 }
 
@@ -50,7 +108,8 @@ ingestForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = ingestForm.querySelector("button");
   button.disabled = true;
-  ingestMessage.textContent = "Indexing PDF...";
+  ingestMessage.textContent = "";
+  startProgress("Indexing document", ingestStages);
 
   try {
     const formData = new FormData();
@@ -61,11 +120,12 @@ ingestForm.addEventListener("submit", async (event) => {
       method: "POST",
       body: formData,
     });
+    finishProgress("Indexed and ready for questions.");
     ingestMessage.textContent = `Indexed ${data.chunks_indexed} chunks from ${data.filename}.`;
     ingestForm.reset();
     await loadSources();
   } catch (error) {
-    ingestMessage.textContent = error.message;
+    failProgress(error.message);
   } finally {
     button.disabled = false;
   }
@@ -75,8 +135,9 @@ askForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = askForm.querySelector("button");
   button.disabled = true;
-  answer.textContent = "Searching sources...";
   citations.innerHTML = "";
+  answer.textContent = "";
+  startProgress("Building answer", askStages);
 
   try {
     const data = await requestJson("/api/ask", {
@@ -88,6 +149,7 @@ askForm.addEventListener("submit", async (event) => {
         doc_type: document.querySelector("#filterDocType").value || null,
       }),
     });
+    finishProgress(data.used_llm ? "Answer generated with Gemini." : "Relevant passages retrieved.");
     answer.textContent = data.answer;
     citations.innerHTML = data.citations
       .map(
@@ -100,11 +162,44 @@ askForm.addEventListener("submit", async (event) => {
       )
       .join("");
   } catch (error) {
+    failProgress(error.message);
     answer.textContent = error.message;
   } finally {
     button.disabled = false;
   }
 });
+
+function startProgress(title, stages) {
+  clearInterval(progressTimer);
+  progressWrap.classList.remove("hidden");
+  progressTitle.textContent = title;
+  setProgress(8, "Preparing request...");
+
+  let index = 0;
+  progressTimer = setInterval(() => {
+    const stage = stages[index] || stages[stages.length - 1];
+    setProgress(stage.pct, stage.text);
+    index = Math.min(index + 1, stages.length - 1);
+  }, 1200);
+}
+
+function finishProgress(message) {
+  clearInterval(progressTimer);
+  setProgress(100, message);
+}
+
+function failProgress(message) {
+  clearInterval(progressTimer);
+  progressWrap.classList.remove("hidden");
+  progressTitle.textContent = "Request stopped";
+  setProgress(100, message);
+}
+
+function setProgress(percent, detail) {
+  progressPercent.textContent = `${percent}%`;
+  progressFill.style.width = `${percent}%`;
+  progressDetail.textContent = detail;
+}
 
 function formatMetadata(metadata) {
   const parts = Object.entries(metadata || {}).map(([key, value]) => `${key}: ${value}`);
@@ -120,5 +215,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+initTheme();
 loadHealth();
+loadSample();
 loadSources();

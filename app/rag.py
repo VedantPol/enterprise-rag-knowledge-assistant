@@ -5,6 +5,7 @@ from typing import Any
 
 from app.config import Settings
 from app.manifest import ManifestStore
+from app.sample_data import SAMPLE_DOCUMENTS, SAMPLE_DOCUMENT_SUMMARY
 from app.schemas import AskResponse, Citation, DocumentSummary, IngestResponse
 
 
@@ -15,6 +16,7 @@ class RagService:
         self._embeddings: Any | None = None
         self._vector_store: Any | None = None
         self._reranker: Any | None = None
+        self._sample_seeded = False
 
     @property
     def embeddings(self) -> Any:
@@ -68,6 +70,7 @@ class RagService:
                 from langchain_core.vectorstores import InMemoryVectorStore
 
                 self._vector_store = InMemoryVectorStore(embedding=self.embeddings)
+                self._seed_sample_data()
         return self._vector_store
 
     @property
@@ -162,7 +165,7 @@ class RagService:
 
     def documents(self) -> list[DocumentSummary]:
         records = self.manifest.all()
-        return [
+        docs = [
             DocumentSummary(
                 source_id=source_id,
                 filename=record.get("filename", "unknown"),
@@ -171,6 +174,11 @@ class RagService:
             )
             for source_id, record in records.items()
         ]
+        if self.settings.seed_sample_data and not self.settings.pinecone_api_key:
+            has_sample = any(doc.source_id == SAMPLE_DOCUMENT_SUMMARY["source_id"] for doc in docs)
+            if not has_sample:
+                docs.insert(0, DocumentSummary(**SAMPLE_DOCUMENT_SUMMARY))
+        return docs
 
     def _rerank(
         self,
@@ -264,6 +272,16 @@ class RagService:
             ),
         )
         return response.text or "Gemini returned an empty response."
+
+    def _seed_sample_data(self) -> None:
+        if self._sample_seeded or not self.settings.seed_sample_data or self.settings.pinecone_api_key:
+            return
+        from langchain_core.documents import Document
+
+        docs = [Document(page_content=item["page_content"], metadata=item["metadata"]) for item in SAMPLE_DOCUMENTS]
+        ids = [f"{item['metadata']['source_id']}:{i}" for i, item in enumerate(SAMPLE_DOCUMENTS)]
+        self._vector_store.add_documents(docs, ids=ids)
+        self._sample_seeded = True
 
     @staticmethod
     def _source_id(path: Path) -> str:

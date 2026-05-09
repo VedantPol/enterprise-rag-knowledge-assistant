@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", repr=False)
     openai_model: str = "gpt-4o-mini"
 
+    seed_sample_data: bool = True
     allowed_origins: str = "*"
 
     storage_dir: Path = Path("storage")
