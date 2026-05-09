@@ -55,14 +55,19 @@ class RagService:
     @property
     def vector_store(self) -> Any:
         if self._vector_store is None:
-            from langchain_pinecone import PineconeVectorStore
+            if self.settings.pinecone_api_key:
+                from langchain_pinecone import PineconeVectorStore
 
-            index = self._ensure_index()
-            self._vector_store = PineconeVectorStore(
-                index=index,
-                embedding=self.embeddings,
-                namespace=self.settings.pinecone_namespace,
-            )
+                index = self._ensure_index()
+                self._vector_store = PineconeVectorStore(
+                    index=index,
+                    embedding=self.embeddings,
+                    namespace=self.settings.pinecone_namespace,
+                )
+            else:
+                from langchain_core.vectorstores import InMemoryVectorStore
+
+                self._vector_store = InMemoryVectorStore(embedding=self.embeddings)
         return self._vector_store
 
     @property
@@ -132,11 +137,12 @@ class RagService:
         filters: dict[str, str | None],
         top_k: int | None = None,
     ) -> AskResponse:
-        pinecone_filter = {key: {"$eq": value} for key, value in filters.items() if value}
+        active_filters = {key: value for key, value in filters.items() if value}
+        search_filter = self._search_filter(active_filters)
         results = self.vector_store.similarity_search_with_score(
             query=question,
             k=top_k or self.settings.retrieval_top_k,
-            filter=pinecone_filter or None,
+            filter=search_filter,
         )
         reranked = self._rerank(question, results)[: self.settings.rerank_top_k]
         docs = [doc for doc, _score in reranked]
@@ -228,6 +234,17 @@ class RagService:
             f"{extractive}",
             False,
         )
+
+    def _search_filter(self, filters: dict[str, str]) -> Any | None:
+        if not filters:
+            return None
+        if self.settings.pinecone_api_key:
+            return {key: {"$eq": value} for key, value in filters.items()}
+
+        def matches(doc: Any) -> bool:
+            return all(doc.metadata.get(key) == value for key, value in filters.items())
+
+        return matches
 
     def _generate_with_gemini(self, question: str, context: str) -> str:
         from google import genai

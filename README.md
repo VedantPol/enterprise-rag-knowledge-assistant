@@ -7,7 +7,7 @@ A deployable FastAPI website for source-aware search over policy and technical P
 - Python
 - FastAPI
 - LangChain
-- Pinecone
+- Pinecone, with an in-memory local demo fallback
 - Docker
 - Gemini API
 - Cloudflare Tunnel
@@ -41,6 +41,8 @@ A deployable FastAPI website for source-aware search over policy and technical P
    ```
 
 Without `GEMINI_API_KEY`, the app still retrieves and cites the most relevant passages. With `GEMINI_API_KEY`, it generates a grounded answer from retrieved context using Gemini. `OPENAI_API_KEY` is still supported as an optional fallback.
+
+For quick local demos, `PINECONE_API_KEY` can be left blank. The app will use an in-memory vector index that resets when the server restarts. For home-server deployment, set `PINECONE_API_KEY` so indexed documents persist in Pinecone.
 
 ## Cloudflare Tunnel Deployment
 
