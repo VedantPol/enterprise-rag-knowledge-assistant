@@ -25,14 +25,12 @@ class Settings(BaseSettings):
     chunk_size: int = 1000
     chunk_overlap: int = 180
 
-    retrieval_top_k: int = 6
-    rerank_top_k: int = 3
-    rerank_model: str = ""
+    retrieval_top_k: int = 12
+    rerank_top_k: int = 5
+    rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
     gemini_api_key: str = Field(default="", repr=False)
-    gemini_model: str = "gemini-2.5-flash-lite"
-    gemini_max_output_tokens: int = 700
-    context_char_limit: int = 6000
+    gemini_model: str = "gemini-2.5-flash"
 
     openai_api_key: str = Field(default="", repr=False)
     openai_model: str = "gpt-4o-mini"

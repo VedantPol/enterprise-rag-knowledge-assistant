@@ -44,8 +44,6 @@ Without `GEMINI_API_KEY`, the app still retrieves and cites the most relevant pa
 
 For quick local demos, `PINECONE_API_KEY` can be left blank. The app will use an in-memory vector index that resets when the server restarts. For home-server deployment, set `PINECONE_API_KEY` so indexed documents persist in Pinecone.
 
-The default local settings are tuned for speed: `gemini-2.5-flash-lite`, six retrieved chunks, three cited chunks, and reranking disabled. To trade speed for retrieval quality, set `RERANK_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2`.
-
 ## Cloudflare Tunnel Deployment
 
 1. On your home server, install Docker and Docker Compose.
