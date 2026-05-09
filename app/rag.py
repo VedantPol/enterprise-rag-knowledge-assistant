@@ -1,5 +1,4 @@
 import hashlib
-import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -196,11 +195,17 @@ class RagService:
             for i, doc in enumerate(docs)
         )
 
+        if self.settings.gemini_api_key:
+            return self._generate_with_gemini(question, context), True
+
         if self.settings.openai_api_key:
             from langchain_openai import ChatOpenAI
 
-            os.environ["OPENAI_API_KEY"] = self.settings.openai_api_key
-            llm = ChatOpenAI(model=self.settings.openai_model, temperature=0)
+            llm = ChatOpenAI(
+                api_key=self.settings.openai_api_key,
+                model=self.settings.openai_model,
+                temperature=0,
+            )
             response = llm.invoke(
                 [
                     (
@@ -223,6 +228,25 @@ class RagService:
             f"{extractive}",
             False,
         )
+
+    def _generate_with_gemini(self, question: str, context: str) -> str:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=self.settings.gemini_api_key)
+        response = client.models.generate_content(
+            model=self.settings.gemini_model,
+            contents=(
+                "You are a source-aware enterprise knowledge assistant. "
+                "Answer only from the provided context. Include bracketed citation numbers "
+                "for every factual claim. If the answer is not in the context, say so.\n\n"
+                f"Question: {question}\n\nContext:\n{context}"
+            ),
+            config=types.GenerateContentConfig(
+                temperature=0,
+            ),
+        )
+        return response.text or "Gemini returned an empty response."
 
     @staticmethod
     def _source_id(path: Path) -> str:

@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     rerank_top_k: int = 5
     rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
+    gemini_api_key: str = Field(default="", repr=False)
+    gemini_model: str = "gemini-2.5-flash"
+
     openai_api_key: str = Field(default="", repr=False)
     openai_model: str = "gpt-4o-mini"
 

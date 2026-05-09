@@ -9,6 +9,7 @@ A deployable FastAPI website for source-aware search over policy and technical P
 - LangChain
 - Pinecone
 - Docker
+- Gemini API
 - Cloudflare Tunnel
 
 ## Local Setup
@@ -24,7 +25,7 @@ A deployable FastAPI website for source-aware search over policy and technical P
    ```bash
    PINECONE_API_KEY=your-pinecone-key
    PINECONE_INDEX_NAME=enterprise-rag
-   OPENAI_API_KEY=optional-for-generated-answers
+   GEMINI_API_KEY=your-free-tier-gemini-key
    ```
 
 3. Run the service:
@@ -39,7 +40,7 @@ A deployable FastAPI website for source-aware search over policy and technical P
    http://localhost:8000
    ```
 
-Without `OPENAI_API_KEY`, the app still retrieves and cites the most relevant passages. With `OPENAI_API_KEY`, it generates a grounded answer from retrieved context.
+Without `GEMINI_API_KEY`, the app still retrieves and cites the most relevant passages. With `GEMINI_API_KEY`, it generates a grounded answer from retrieved context using Gemini. `OPENAI_API_KEY` is still supported as an optional fallback.
 
 ## Cloudflare Tunnel Deployment
 
