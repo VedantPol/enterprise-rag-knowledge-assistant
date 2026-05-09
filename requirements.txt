@@ -1,0 +1,14 @@
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+python-multipart==0.0.27
+pydantic-settings==2.14.1
+langchain==0.3.30
+langchain-community==0.3.31
+langchain-core==0.3.86
+langchain-huggingface==0.3.1
+langchain-openai==0.3.35
+langchain-pinecone==0.2.13
+langchain-text-splitters==0.3.11
+pinecone==7.3.0
+pypdf==6.11.0
+sentence-transformers==5.4.1

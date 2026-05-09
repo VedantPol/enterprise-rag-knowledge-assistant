@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Enterprise RAG Knowledge Assistant</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Policy and technical document search</p>
+          <h1>Enterprise RAG Knowledge Assistant</h1>
+        </div>
+        <div class="status" id="healthStatus">Checking service...</div>
+      </section>
+
+      <section class="workspace">
+        <aside class="panel ingest-panel">
+          <h2>Ingest PDF</h2>
+          <form id="ingestForm">
+            <label>
+              PDF
+              <input id="pdfFile" type="file" name="file" accept="application/pdf" required />
+            </label>
+            <label>
+              Department
+              <input id="department" name="department" placeholder="Engineering, HR, Legal" />
+            </label>
+            <label>
+              Document type
+              <input id="docType" name="doc_type" placeholder="Policy, Runbook, Spec" />
+            </label>
+            <button type="submit">Index document</button>
+          </form>
+          <div class="message" id="ingestMessage"></div>
+
+          <h2>Indexed Sources</h2>
+          <div class="sources" id="sources"></div>
+        </aside>
+
+        <section class="panel ask-panel">
+          <form id="askForm">
+            <label>
+              Question
+              <textarea id="question" rows="4" placeholder="Ask a grounded question about indexed documents..." required></textarea>
+            </label>
+            <div class="filters">
+              <label>
+                Department
+                <input id="filterDepartment" placeholder="Optional" />
+              </label>
+              <label>
+                Type
+                <input id="filterDocType" placeholder="Optional" />
+              </label>
+            </div>
+            <button type="submit">Ask assistant</button>
+          </form>
+
+          <article class="answer" id="answer">
+            <p>Upload documents, then ask a question. Answers are grounded in retrieved passages and citations.</p>
+          </article>
+          <section class="citations" id="citations"></section>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
