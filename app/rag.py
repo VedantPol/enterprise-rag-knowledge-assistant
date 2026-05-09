@@ -195,11 +195,7 @@ class RagService:
                 False,
             )
 
-        context = "\n\n".join(
-            f"[{i + 1}] {doc.metadata.get('source', 'unknown')} page {self._page_number(doc.metadata) or '?'}\n"
-            f"{doc.page_content}"
-            for i, doc in enumerate(docs)
-        )
+        context = self._build_context(docs)
 
         if self.settings.gemini_api_key:
             return self._generate_with_gemini(question, context), True
@@ -261,9 +257,23 @@ class RagService:
             ),
             config=types.GenerateContentConfig(
                 temperature=0,
+                max_output_tokens=self.settings.gemini_max_output_tokens,
             ),
         )
         return response.text or "Gemini returned an empty response."
+
+    def _build_context(self, docs: list[Any]) -> str:
+        parts: list[str] = []
+        used_chars = 0
+        for i, doc in enumerate(docs):
+            header = f"[{i + 1}] {doc.metadata.get('source', 'unknown')} page {self._page_number(doc.metadata) or '?'}\n"
+            remaining = self.settings.context_char_limit - used_chars - len(header)
+            if remaining <= 0:
+                break
+            body = doc.page_content[:remaining]
+            parts.append(f"{header}{body}")
+            used_chars += len(header) + len(body)
+        return "\n\n".join(parts)
 
     @staticmethod
     def _source_id(path: Path) -> str:
