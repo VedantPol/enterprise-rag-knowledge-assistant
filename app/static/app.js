@@ -106,10 +106,32 @@ async function loadSources() {
 
 async function clearSessionUploads() {
   try {
-    await requestJson("/api/session/clear", { method: "POST" });
+    const data = await requestJson("/api/session/clear", { method: "POST" });
+    if (data.restart_scheduled) {
+      healthStatus.textContent = "Restarting service...";
+      await waitForService();
+    }
   } catch (error) {
     console.warn("Could not clear temporary uploads", error);
   }
+}
+
+async function waitForService() {
+  for (let attempt = 0; attempt < 45; attempt += 1) {
+    await delay(1000);
+    try {
+      await requestJson("/health");
+      return;
+    } catch {
+      healthStatus.textContent = "Waiting for service...";
+    }
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 ingestForm.addEventListener("submit", async (event) => {

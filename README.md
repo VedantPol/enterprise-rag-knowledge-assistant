@@ -172,5 +172,7 @@ docker compose --profile tunnel logs -f cloudflared
 
 - The built-in dummy sample data is the only content kept resident without Pinecone.
 - Uploaded user PDFs are temporary and are cleared on page load or refresh.
+- Reranking is enabled by default for better result ordering, but `KEEP_RERANKER_LOADED=false` releases the reranker after each query.
+- Set `RESTART_ON_SESSION_CLEAR=true` if you want page load or refresh to clear temporary data and let Docker restart the app process for the strongest RAM reset.
 - Default embeddings use `sentence-transformers/all-MiniLM-L6-v2` with `EMBEDDING_DIM=384`.
 - If you change the embedding model, update `EMBEDDING_DIM` and use a new Pinecone index.

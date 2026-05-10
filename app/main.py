@@ -1,3 +1,6 @@
+import os
+from threading import Timer
+
 from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -49,7 +52,11 @@ def sample() -> dict:
 
 @app.post("/api/session/clear")
 def clear_session(service: RagService = Depends(get_rag_service)) -> dict:
-    return service.clear_user_data()
+    result = service.clear_user_data()
+    result["restart_scheduled"] = settings.restart_on_session_clear
+    if settings.restart_on_session_clear:
+        Timer(0.5, lambda: os._exit(0)).start()
+    return result
 
 
 @app.post("/api/ingest", response_model=IngestResponse)

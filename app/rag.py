@@ -1,5 +1,8 @@
+import ctypes
+import gc
 import hashlib
 import shutil
+import sys
 from pathlib import Path
 from threading import RLock
 from typing import Any
@@ -200,6 +203,7 @@ class RagService:
 
         self.manifest.clear()
         self._clear_upload_dir()
+        self._release_query_cache()
         return {"sources_cleared": sources_cleared, "chunks_cleared": chunks_cleared}
 
     def _rerank(
@@ -214,9 +218,14 @@ class RagService:
             return sorted(results, key=lambda item: item[1], reverse=True)
 
         pairs = [(question, doc.page_content) for doc, _score in results]
-        scores = reranker.predict(pairs)
-        enriched = [(doc, float(score)) for (doc, _old_score), score in zip(results, scores)]
-        return sorted(enriched, key=lambda item: item[1], reverse=True)
+        try:
+            scores = reranker.predict(pairs)
+            enriched = [(doc, float(score)) for (doc, _old_score), score in zip(results, scores)]
+            return sorted(enriched, key=lambda item: item[1], reverse=True)
+        finally:
+            if not self.settings.keep_reranker_loaded:
+                self._reranker = None
+                self._release_query_cache()
 
     def _generate_answer(self, question: str, docs: list[Any]) -> tuple[str, bool]:
         if not docs:
@@ -312,6 +321,20 @@ class RagService:
                 path.unlink(missing_ok=True)
             elif path.is_dir():
                 shutil.rmtree(path)
+
+    def _release_query_cache(self) -> None:
+        self._reranker = None
+        torch = sys.modules.get("torch")
+        if torch is not None and getattr(torch, "cuda", None) is not None:
+            try:
+                torch.cuda.empty_cache()
+            except Exception:
+                pass
+        gc.collect()
+        try:
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+        except Exception:
+            pass
 
     @staticmethod
     def _source_id(path: Path) -> str:

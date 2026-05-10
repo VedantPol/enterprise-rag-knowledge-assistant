@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     retrieval_top_k: int = 12
     rerank_top_k: int = 5
     rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    keep_reranker_loaded: bool = False
+    restart_on_session_clear: bool = False
 
     gemini_api_key: str = Field(default="", repr=False)
     gemini_model: str = "gemini-2.5-flash"
