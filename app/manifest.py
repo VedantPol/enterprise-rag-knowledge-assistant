@@ -20,3 +20,7 @@ class ManifestStore:
             data = json.loads(self.path.read_text(encoding="utf-8") or "{}")
             data[source_id] = record
             self.path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+
+    def clear(self) -> None:
+        with self._lock:
+            self.path.write_text("{}", encoding="utf-8")

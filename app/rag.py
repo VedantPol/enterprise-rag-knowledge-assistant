@@ -1,6 +1,7 @@
 import hashlib
 import shutil
 from pathlib import Path
+from threading import RLock
 from typing import Any
 
 from app.config import Settings
@@ -17,6 +18,9 @@ class RagService:
         self._vector_store: Any | None = None
         self._reranker: Any | None = None
         self._sample_seeded = False
+        self._lock = RLock()
+        self._ephemeral_sources: dict[str, dict] = {}
+        self._ephemeral_doc_ids: dict[str, list[str]] = {}
 
     @property
     def embeddings(self) -> Any:
@@ -93,17 +97,13 @@ class RagService:
         from langchain_text_splitters import RecursiveCharacterTextSplitter
 
         source_id = self._source_id(upload_path)
-        saved_name = f"{source_id[:12]}-{Path(filename).name}"
-        saved_path = self.settings.upload_dir / saved_name
-        shutil.copyfile(upload_path, saved_path)
-
-        docs = PyPDFLoader(str(saved_path)).load()
+        docs = PyPDFLoader(str(upload_path)).load()
         for doc in docs:
             doc.metadata.update(
                 {
                     "source_id": source_id,
                     "source": filename,
-                    "stored_path": str(saved_path),
+                    "temporary": "true",
                     **{key: value for key, value in metadata.items() if value},
                 }
             )
@@ -114,18 +114,16 @@ class RagService:
         )
         chunks = splitter.split_documents(docs)
         ids = [f"{source_id}:{i}" for i in range(len(chunks))]
-        self.vector_store.add_documents(chunks, ids=ids)
 
         clean_metadata = {key: value for key, value in metadata.items() if value}
-        self.manifest.upsert(
-            source_id,
-            {
+        with self._lock:
+            self.vector_store.add_documents(chunks, ids=ids)
+            self._ephemeral_doc_ids[source_id] = ids
+            self._ephemeral_sources[source_id] = {
                 "filename": filename,
-                "stored_path": str(saved_path),
                 "chunks": len(chunks),
                 "metadata": clean_metadata,
-            },
-        )
+            }
 
         return IngestResponse(
             source_id=source_id,
@@ -164,7 +162,7 @@ class RagService:
         return AskResponse(answer=answer, citations=citations, used_llm=used_llm)
 
     def documents(self) -> list[DocumentSummary]:
-        records = self.manifest.all()
+        records = self.manifest.all() if self.settings.pinecone_api_key else {}
         docs = [
             DocumentSummary(
                 source_id=source_id,
@@ -174,11 +172,35 @@ class RagService:
             )
             for source_id, record in records.items()
         ]
+        with self._lock:
+            docs.extend(
+                DocumentSummary(
+                    source_id=source_id,
+                    filename=record.get("filename", "unknown"),
+                    chunks=int(record.get("chunks", 0)),
+                    metadata=record.get("metadata", {}),
+                )
+                for source_id, record in self._ephemeral_sources.items()
+            )
         if self.settings.seed_sample_data and not self.settings.pinecone_api_key:
             has_sample = any(doc.source_id == SAMPLE_DOCUMENT_SUMMARY["source_id"] for doc in docs)
             if not has_sample:
                 docs.insert(0, DocumentSummary(**SAMPLE_DOCUMENT_SUMMARY))
         return docs
+
+    def clear_user_data(self) -> dict[str, int]:
+        with self._lock:
+            ids = [doc_id for source_ids in self._ephemeral_doc_ids.values() for doc_id in source_ids]
+            if ids and self._vector_store is not None:
+                self._vector_store.delete(ids=ids)
+            sources_cleared = len(self._ephemeral_sources)
+            chunks_cleared = len(ids)
+            self._ephemeral_sources.clear()
+            self._ephemeral_doc_ids.clear()
+
+        self.manifest.clear()
+        self._clear_upload_dir()
+        return {"sources_cleared": sources_cleared, "chunks_cleared": chunks_cleared}
 
     def _rerank(
         self,
@@ -282,6 +304,14 @@ class RagService:
         ids = [f"{item['metadata']['source_id']}:{i}" for i, item in enumerate(SAMPLE_DOCUMENTS)]
         self._vector_store.add_documents(docs, ids=ids)
         self._sample_seeded = True
+
+    def _clear_upload_dir(self) -> None:
+        self.settings.upload_dir.mkdir(parents=True, exist_ok=True)
+        for path in self.settings.upload_dir.iterdir():
+            if path.is_file():
+                path.unlink(missing_ok=True)
+            elif path.is_dir():
+                shutil.rmtree(path)
 
     @staticmethod
     def _source_id(path: Path) -> str:

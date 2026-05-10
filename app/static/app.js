@@ -104,6 +104,14 @@ async function loadSources() {
   }
 }
 
+async function clearSessionUploads() {
+  try {
+    await requestJson("/api/session/clear", { method: "POST" });
+  } catch (error) {
+    console.warn("Could not clear temporary uploads", error);
+  }
+}
+
 ingestForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = ingestForm.querySelector("button");
@@ -216,6 +224,9 @@ function escapeHtml(value) {
 }
 
 initTheme();
-loadHealth();
-loadSample();
-loadSources();
+
+(async function boot() {
+  await clearSessionUploads();
+  await Promise.all([loadHealth(), loadSample()]);
+  await loadSources();
+})();

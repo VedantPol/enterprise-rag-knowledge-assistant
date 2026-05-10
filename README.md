@@ -1,6 +1,6 @@
 # Enterprise RAG Knowledge Assistant
 
-A sample source-aware RAG web app for searching policy and technical documents. It parses PDFs, chunks text with LangChain, embeds content, stores vectors in Pinecone for production, supports local in-memory demo mode, reranks results, and generates citation-grounded answers with Gemini.
+A sample source-aware RAG web app for searching policy and technical documents. It parses PDFs, chunks text with LangChain, embeds content, keeps the built-in dummy knowledge base resident, treats uploaded PDFs as temporary data, reranks results, and generates citation-grounded answers with Gemini.
 
 ## What You Can Try First
 
@@ -10,15 +10,15 @@ The app ships with a built-in dummy topic:
 Cloudflare Tunnel Home Server Deployment
 ```
 
-After starting the website, click one of the suggested prompts in the left panel. You can test the full ask flow before uploading your own PDF.
+After starting the website, click one of the suggested prompts in the left panel. You can test the full ask flow before uploading a temporary PDF.
 
 ## Stack
 
 - Python
 - FastAPI
 - LangChain
-- Pinecone for persistent vector search
-- In-memory vector search for local sample mode
+- Tiny in-memory vector search for built-in dummy data
+- Temporary upload indexing that clears on page load or refresh
 - Gemini API
 - Docker
 - Cloudflare Tunnel
@@ -50,7 +50,7 @@ After starting the website, click one of the suggested prompts in the left panel
    GEMINI_API_KEY=your-free-tier-gemini-key
    ```
 
-   You may leave `PINECONE_API_KEY` blank for the sample demo. The app will use an in-memory vector index. That means uploaded PDFs reset when the server restarts.
+   You may leave `PINECONE_API_KEY` blank. The built-in dummy data uses a tiny in-memory index, while uploaded PDFs are temporary and are cleared on page load or refresh.
 
 5. Start the website.
 
@@ -71,17 +71,17 @@ Try these with the built-in sample data:
 - What is the safest way to expose the app from a home server?
 - Which environment variables do I need before running Docker Compose?
 - How do I update the app after pushing a new GitHub commit?
-- Why should I keep Pinecone enabled on the server?
+- What happens to uploaded PDFs when the page refreshes?
 
-## Upload Your Own PDF
+## Upload A Temporary PDF
 
-1. Use the **Ingest PDF** panel.
+1. Use the **Ingest Temporary PDF** panel.
 2. Choose a PDF.
 3. Optionally add metadata like department and document type.
 4. Click **Index document**.
 5. Ask a question about the PDF.
 
-The loading bar shows the active work: upload, parsing, chunking, embeddings, retrieval, reranking, Gemini API call, and citation formatting.
+The loading bar shows the active work: upload, parsing, chunking, embeddings, retrieval, reranking, Gemini API call, and citation formatting. Temporary PDF data is deleted when the page loads or refreshes.
 
 ## Run With Docker
 
@@ -123,11 +123,11 @@ docker compose pull rag-assistant
 docker compose --profile tunnel up -d
 ```
 
-Keep secrets in `.env`. Do not put `GEMINI_API_KEY`, `PINECONE_API_KEY`, or `CLOUDFLARE_TUNNEL_TOKEN` inside the image. `PINECONE_API_KEY` may stay blank; the app will use in-memory storage, which resets when the container restarts.
+Keep secrets in `.env`. Do not put `GEMINI_API_KEY`, `PINECONE_API_KEY`, or `CLOUDFLARE_TUNNEL_TOKEN` inside the image. `PINECONE_API_KEY` may stay blank; the app keeps only the built-in dummy data resident and clears uploaded user PDFs on page load or refresh.
 
 ## Deploy With Cloudflare Tunnel
 
-For a home server, Pinecone is optional. Without a Pinecone key, leave `PINECONE_API_KEY` blank and the app will still run in in-memory mode. Uploaded documents will reset when the container restarts.
+For a home server, Pinecone is optional. Without a Pinecone key, leave `PINECONE_API_KEY` blank. The app still runs, keeps the dummy sample knowledge base available, and clears uploaded user PDFs whenever the page loads or refreshes.
 
 If you later add Pinecone, use:
 
@@ -170,7 +170,7 @@ docker compose --profile tunnel logs -f cloudflared
 
 ## Notes
 
-- Local sample mode uses in-memory vectors and resets on restart.
-- Server mode should use Pinecone for persistence.
+- The built-in dummy sample data is the only content kept resident without Pinecone.
+- Uploaded user PDFs are temporary and are cleared on page load or refresh.
 - Default embeddings use `sentence-transformers/all-MiniLM-L6-v2` with `EMBEDDING_DIM=384`.
 - If you change the embedding model, update `EMBEDDING_DIM` and use a new Pinecone index.

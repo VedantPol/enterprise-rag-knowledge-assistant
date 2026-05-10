@@ -47,6 +47,11 @@ def sample() -> dict:
     return {"topic": SAMPLE_TOPIC, "prompts": SAMPLE_PROMPTS}
 
 
+@app.post("/api/session/clear")
+def clear_session(service: RagService = Depends(get_rag_service)) -> dict:
+    return service.clear_user_data()
+
+
 @app.post("/api/ingest", response_model=IngestResponse)
 async def ingest(
     file: UploadFile = File(...),

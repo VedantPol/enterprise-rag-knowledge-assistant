@@ -4,7 +4,7 @@ SAMPLE_PROMPTS = [
     "What is the safest way to expose the app from a home server?",
     "Which environment variables do I need before running Docker Compose?",
     "How do I update the app after pushing a new GitHub commit?",
-    "Why should I keep Pinecone enabled on the server?",
+    "What happens to uploaded PDFs when the page refreshes?",
 ]
 
 SAMPLE_DOCUMENTS = [
@@ -27,9 +27,9 @@ SAMPLE_DOCUMENTS = [
     {
         "page_content": (
             "Before starting the stack, copy .env.example to .env and set GEMINI_API_KEY for answer generation. "
-            "For persistent retrieval, set PINECONE_API_KEY and keep PINECONE_INDEX_NAME consistent across "
-            "deployments. CLOUDFLARE_TUNNEL_TOKEN is only required when starting the tunnel profile with "
-            "docker compose --profile tunnel up -d --build."
+            "PINECONE_API_KEY can stay blank when the app should avoid persistent user-document storage. "
+            "CLOUDFLARE_TUNNEL_TOKEN is only required when starting the tunnel profile with docker compose "
+            "--profile tunnel up -d --build."
         ),
         "metadata": {
             "source_id": "sample-cloudflare-home-server",
@@ -57,9 +57,9 @@ SAMPLE_DOCUMENTS = [
     },
     {
         "page_content": (
-            "Local demo mode can run without Pinecone by using an in-memory vector store, but that index is reset "
-            "whenever the server restarts. A server deployment should use Pinecone so uploaded document chunks, "
-            "metadata filters, and retrieval results survive container rebuilds and machine restarts."
+            "Without Pinecone, the app keeps only the small built-in dummy knowledge base resident in memory. "
+            "Uploaded PDFs are temporary: the backend does not persist the PDF file or manifest entry, and the "
+            "browser clears temporary upload chunks whenever the page loads or refreshes."
         ),
         "metadata": {
             "source_id": "sample-cloudflare-home-server",
