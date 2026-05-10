@@ -97,7 +97,7 @@ docker compose up -d --build
 Then open:
 
 ```text
-http://localhost:8000
+http://localhost:8017
 ```
 
 ## Push Image To Docker Hub
@@ -123,11 +123,13 @@ docker compose pull rag-assistant
 docker compose --profile tunnel up -d
 ```
 
-Keep secrets in `.env`. Do not put `GEMINI_API_KEY`, `PINECONE_API_KEY`, or `CLOUDFLARE_TUNNEL_TOKEN` inside the image.
+Keep secrets in `.env`. Do not put `GEMINI_API_KEY`, `PINECONE_API_KEY`, or `CLOUDFLARE_TUNNEL_TOKEN` inside the image. `PINECONE_API_KEY` may stay blank; the app will use in-memory storage, which resets when the container restarts.
 
 ## Deploy With Cloudflare Tunnel
 
-For a home server, use Pinecone so vectors survive restarts:
+For a home server, Pinecone is optional. Without a Pinecone key, leave `PINECONE_API_KEY` blank and the app will still run in in-memory mode. Uploaded documents will reset when the container restarts.
+
+If you later add Pinecone, use:
 
 ```env
 PINECONE_API_KEY=your-pinecone-key
@@ -161,7 +163,7 @@ docker compose --profile tunnel up -d --build
 ## Useful Checks
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8017/health
 docker compose logs -f rag-assistant
 docker compose --profile tunnel logs -f cloudflared
 ```

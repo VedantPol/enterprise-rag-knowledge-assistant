@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8017}:8000"
     volumes:
       - ./storage:/app/storage
       - ./data:/app/data
